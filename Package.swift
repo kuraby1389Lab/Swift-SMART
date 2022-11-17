@@ -16,7 +16,7 @@ let package = Package(
             targets: ["SMART"]),
     ],
     dependencies: [
-		.package(url: "https://github.com/smart-on-fhir/Swift-FHIR", "4.2.0"..<"5.0.0"),
+		.package(url: "https://github.com/kuraby1389Lab/Swift-FHIR.git", "4.2.0"..<"5.0.0"),
 		.package(url: "https://github.com/p2/OAuth2", "5.1.0"..<"6.0.0"),
     ],
     targets: [
