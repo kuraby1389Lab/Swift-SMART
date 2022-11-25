@@ -8,7 +8,8 @@ import PackageDescription
 let package = Package(
     name: "SMART",
 	platforms: [
-		.macOS(.v10_13), .iOS(.v12)
+		.macOS(.v10_13),
+        .iOS(.v12)
 	],
     products: [
         .library(
@@ -16,14 +17,15 @@ let package = Package(
             targets: ["SMART"]),
     ],
     dependencies: [
-		.package(url: "https://github.com/kuraby1389Lab/Swift-FHIR.git", "4.2.0"..<"5.0.0"),
-		.package(url: "https://github.com/p2/OAuth2", "5.1.0"..<"6.0.0"),
+		.package(url: "https://github.com/kuraby1389Lab/Swift-FHIR.git", .upToNextMajor(from: "4.2.0")),
+		// .package(url: "https://github.com/p2/OAuth2", "5.1.0"..<"6.0.0"),
+        // .package(url: "https://github.com/openid/AppAuth-iOS", .upToNextMajor(from: "1.6.0"))
     ],
     targets: [
 		.target(
 			name: "SMART",
 			dependencies: [
-				.product(name: "OAuth2"),
+				// .product(name: "AppAuth-iOS"),
 				.product(name: "FHIR"),
 			],
 			path: "Sources",
