@@ -71,7 +71,7 @@ open class Client {
 	*/
 	public init(server: Server) {
 		self.server = server
-		server.logger?.debug("SMART", msg: "Initialized SMART on FHIR client against server \(server.baseURL.description)")
+		// server.logger?.debug("SMART", msg: "Initialized SMART on FHIR client against server \(server.baseURL.description)")
 	}
 	
 	/**
@@ -94,17 +94,17 @@ open class Client {
 	- parameter baseURL:  The server's base URL
 	- parameter settings: Client settings, mostly concerning authorization
 	*/
-	public convenience init(baseURL: URL, settings: OAuth2JSON) {
-		var sett = settings
-		if let redirect = settings["redirect"] as? String {
-			sett["redirect_uris"] = [redirect]
-		}
-		if nil == settings["title"] {
-			sett["title"] = "SMART"
-		}
-		let srv = Server(baseURL: baseURL, auth: sett)
-		self.init(server: srv)
-	}
+//	public convenience init(baseURL: URL, settings: OAuth2JSON) {
+//		var sett = settings
+//		if let redirect = settings["redirect"] as? String {
+//			sett["redirect_uris"] = [redirect]
+//		}
+//		if nil == settings["title"] {
+//			sett["title"] = "SMART"
+//		}
+//		let srv = Server(baseURL: baseURL, auth: sett)
+//		self.init(server: srv)
+//	}
 	
 	
 	// MARK: - Preparations
@@ -115,9 +115,9 @@ open class Client {
 	
 	- parameter callback: The callback to call if the server is ready or an error has occurred
 	*/
-	open func ready(callback: @escaping (Error?) -> ()) {
-		server.ready(callback: callback)
-	}
+//	open func ready(callback: @escaping (Error?) -> ()) {
+//		server.ready(callback: callback)
+//	}
 	
 	/**
 	Call this to start the authorization process. Implicitly calls `ready`, so no need to call it yourself.
@@ -128,29 +128,29 @@ open class Client {
 	- parameter callback: The callback that is called when authorization finishes, with a patient resource (if launch/patient was specified
 	                      or an error
 	*/
-	open func authorize(callback: @escaping (_ patient: Patient?, _ error: Error?) -> ()) {
-		server.mustAbortAuthorization = false
-		server.authorize(with: self.authProperties, callback: callback)
-	}
+//	open func authorize(callback: @escaping (_ patient: Patient?, _ error: Error?) -> ()) {
+//		server.mustAbortAuthorization = false
+//		server.authorize(with: self.authProperties, callback: callback)
+//	}
 	
 	/// Will return true while the client is waiting for the authorization callback.
-	open var awaitingAuthCallback: Bool {
-		get { return nil != server.auth?.authCallback }
-	}
+//	open var awaitingAuthCallback: Bool {
+//		get { return nil != server.auth?.authCallback }
+//	}
 	
 	/**
 	Call this with the redirect URL when intercepting the redirect callback in the app delegate.
 	
 	- parameter url: The URL that was redirected to
 	*/
-	open func didRedirect(to url: URL) -> Bool {
-		return server.auth?.handleRedirect(url) ?? false
-	}
+//	open func didRedirect(to url: URL) -> Bool {
+//		return server.auth?.handleRedirect(url) ?? false
+//	}
 	
 	/** Stops any request currently in progress. */
-	open func abort() {
-		server.abort()
-	}
+//	open func abort() {
+//		server.abort()
+//	}
 	
 	/** Resets state and authorization data. */
 	open func reset() {
@@ -158,9 +158,9 @@ open class Client {
 	}
 	
 	/** Throws away local client registration data. */
-	open func forgetClientRegistration() {
-		server.forgetClientRegistration()
-	}
+//	open func forgetClientRegistration() {
+//		server.forgetClientRegistration()
+//	}
 	
 	
 	// MARK: - Making Requests
@@ -197,5 +197,10 @@ open class Client {
 			server.performRequest(against: url.path, handler: handler, callback: callback)
 		}
 	}
+    
+    @discardableResult
+    open func handleRedirect(_ redirect: URL) -> Bool {
+        return server.handleRedirect(redirect)
+    }
 }
 

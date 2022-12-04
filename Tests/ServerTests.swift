@@ -39,22 +39,22 @@ class ServerTests: XCTestCase {
 			exp1.fulfill()
 		}
 		
-		let fileURL = URL(fileURLWithPath: "\(#file)").deletingLastPathComponent()
-		server = Server(baseURL: fileURL)
-		let exp2 = self.expectation(description: "Metadata fetch expectation 2")
-		server.getCapabilityStatement() { error in
-			XCTAssertNil(error, "Expecting filesystem-fetching to succeed")
-			XCTAssertNotNil(server.auth, "Server is OAuth2 protected, must have `Auth` instance")
-			if let auth = server.auth {
-				XCTAssertTrue(auth.type == AuthType.codeGrant, "Should use code grant auth type, not \(server.auth!.type.rawValue)")
-				XCTAssertNotNil(auth.settings, "Server `Auth` instance must have settings dictionary")
-				XCTAssertNotNil(auth.settings?["token_uri"], "Must read token_uri")
-				XCTAssertEqual(auth.settings?["token_uri"] as? String, "https://authorize.smarthealthit.org/token", "token_uri must be “https://authorize.smarthealthit.org/token”")
-			}
-			exp2.fulfill()
-		}
-		
-		waitForExpectations(timeout: 20, handler: nil)
+//		let fileURL = URL(fileURLWithPath: "\(#file)").deletingLastPathComponent()
+//		server = Server(baseURL: fileURL)
+//		let exp2 = self.expectation(description: "Metadata fetch expectation 2")
+//		server.getCapabilityStatement() { error in
+//			XCTAssertNil(error, "Expecting filesystem-fetching to succeed")
+//			XCTAssertNotNil(server.auth, "Server is OAuth2 protected, must have `Auth` instance")
+//			if let auth = server.auth {
+//				XCTAssertTrue(auth.type == AuthType.codeGrant, "Should use code grant auth type, not \(server.auth!.type.rawValue)")
+//				XCTAssertNotNil(auth.settings, "Server `Auth` instance must have settings dictionary")
+//				XCTAssertNotNil(auth.settings?["token_uri"], "Must read token_uri")
+//				XCTAssertEqual(auth.settings?["token_uri"] as? String, "https://authorize.smarthealthit.org/token", "token_uri must be “https://authorize.smarthealthit.org/token”")
+//			}
+//			exp2.fulfill()
+//		}
+//		
+//		waitForExpectations(timeout: 20, handler: nil)
 	}
 }
 

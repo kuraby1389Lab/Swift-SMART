@@ -164,9 +164,9 @@ open class PatientList {
 				if let error = error {
 					print("ERROR running patient query: \(error)")
 					this.lastStatusError = error
-					callOnMainThread() {
-						this.status = .ready
-					}
+//					callOnMainThread() {
+//						this.status = .ready
+//					}
 				}
 				else {
 					var patients: [Patient]? = nil
@@ -188,17 +188,17 @@ open class PatientList {
 						}
 					}
 					
-					callOnMainThread() {
-						if let total = expTotal {
-							this.expectedNumberOfPatients = UInt(total)
-						}
-						// when patients is nil, only set this.patients to nil if appendPatients is false
-						// otherwise we might reset the list to no patients when hitting a 404 or a timeout
-						if nil != patients || !appendPatients {
-							this.patients = patients
-						}
-						this.status = .ready
-					}
+//					callOnMainThread() {
+//						if let total = expTotal {
+//							this.expectedNumberOfPatients = UInt(total)
+//						}
+//						// when patients is nil, only set this.patients to nil if appendPatients is false
+//						// otherwise we might reset the list to no patients when hitting a 404 or a timeout
+//						if nil != patients || !appendPatients {
+//							this.patients = patients
+//						}
+//						this.status = .ready
+//					}
 				}
 			}
 		}

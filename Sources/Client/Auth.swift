@@ -7,63 +7,96 @@
 //
 
 import Foundation
+import AppAuth
 
-
-/**
-The OAuth2-type to use.
-*/
-enum AuthType: String {
-	case none = "none"
-	case implicitGrant = "implicit"
-	case codeGrant = "authorization_code"
-	case clientCredentials = "client_credentials"
+public extension URLRequest {
+    
+    mutating func addAuthorization(accessToken: String) {
+        var fields:[String: String] = allHTTPHeaderFields ?? [:]
+        fields["Authorization"] = "Bearer \(accessToken)"
+        allHTTPHeaderFields = fields
+    }
+    
 }
 
+public struct AuthorizationParameters: Equatable {
+    public init(clientID: String,
+                clientSecret: String? = nil,
+                scopes: [String]? = nil,
+                redirectURL: URL? = nil,
+                responseType: String,
+                state: String? = nil,
+                nonce: String? = nil,
+                codeVerifier: String? = nil,
+                codeChallenge: String? = nil,
+                codeChallengeMethod: String? = nil,
+                additionalParameters: [String : String]? = nil) {
+        self.clientID = clientID
+        self.clientSecret = clientSecret
+        self.scopes = scopes
+        self.redirectURL = redirectURL
+        self.responseType = responseType
+        self.state = state
+        self.nonce = nonce
+        self.codeVerifier = codeVerifier
+        self.codeChallenge = codeChallenge
+        self.codeChallengeMethod = codeChallengeMethod
+        self.additionalParameters = additionalParameters
+    }
+    
+    public var clientID: String
+    public var clientSecret: String?
+    public var scopes:[String]?
+    public var redirectURL: URL?
+    public var responseType: String
+    public var state: String?
+    public var nonce: String?
+    public var codeVerifier: String?
+    public var codeChallenge: String?
+    public var codeChallengeMethod: String?
+    public var additionalParameters: [String: String]?
+    
+    public func buildRequest(with configuration:OIDServiceConfiguration) -> OIDAuthorizationRequest {
+        return OIDAuthorizationRequest(configuration: configuration,
+                                       clientId: clientID,
+                                       clientSecret: clientSecret,
+                                       scope: scopes?.joined(separator: " "),
+                                       redirectURL: redirectURL,
+                                       responseType: responseType,
+                                       state: state,
+                                       nonce: nonce,
+                                       codeVerifier: codeVerifier,
+                                       codeChallenge: codeChallenge,
+                                       codeChallengeMethod: codeChallengeMethod,
+                                       additionalParameters: additionalParameters)
+    }
+}
 
-/**
-Describes the OAuth2 authentication method to be used.
-*/
 class Auth {
 	
-	/// The authentication type to use.
-	let type: AuthType
-	
-	/**
-	Settings to be used to initialize the OAuth2 subclass. Supported keys:
-	
-	- client_id
-	- registration_uri
-	- authorize_uri
-	- token_uri
-	- title
-	*/
-	var settings: OAuth2JSON?
+    private(set) var state: OIDAuthState?
+    private(set) var configuration: OIDServiceConfiguration?
+    
+    private(set) var session: OIDExternalUserAgentSession?
+    
+    private(set) var service: OIDAuthorizationService?
+    
+    let issuer: URL?
 	
 	/// The server this instance belongs to.
 	unowned let server: Server
-	
-	/// The authentication object, used internally.
-	var oauth: OAuth2? {
-		didSet {
-			if let logger = server.logger {
-				oauth?.logger = logger
-			}
-			else if let logger = oauth?.logger {
-				server.logger = logger
-			}
-		}
-	}
-	
-	/// The configuration for the authorization in progress.
-	var authProperties: SMARTAuthProperties?
 	
 	/// Context used during authorization to pass OS-specific information, handled in the extensions.
 	var authContext: AnyObject?
 	
 	/// The closure to call when authorization finishes.
-	var authCallback: ((_ parameters: OAuth2JSON?, _ error: Error?) -> ())?
+    typealias Action = OIDAuthStateAction
 	
 	
+    var hasConfiguration:Bool {
+        configuration != nil
+    }
+    
 	/**
 	Designated initializer.
 	
@@ -71,226 +104,82 @@ class Auth {
 	- parameter server: The server these auth settings apply to
 	- parameter settings: Authentication settings
 	*/
-	init(type: AuthType, server: Server, settings: OAuth2JSON?) {
-		self.type = type
+    init(server: Server, issuer: URL) {
 		self.server = server
-		self.settings = settings
-		if let sett = self.settings {
-			self.configure(withSettings: sett)
-		}
+        self.issuer = issuer
+        discoverConfiguration(for: issuer)
 	}
-	
-	/**
-	Convenience initializer from the server cabability statement's rest.security parts.
-	
-	- parameter fromCapabilitySecurity: The server cabability statement's rest.security pieces to inspect
-	- parameter server:                 The server to use
-	- parameter settings:               Settings, mostly passed on to the OAuth2 instance
-	*/
-	convenience init?(fromCapabilitySecurity security: CapabilityStatementRestSecurity, server: Server, settings: OAuth2JSON?) {
-		var authSettings = settings ?? OAuth2JSON(minimumCapacity: 3)
-		
-		if let services = security.service {
-			for service in services {
-				server.logger?.debug("SMART", msg: "Server supports REST security via “\(service.text ?? "unknown")”")
-				if let codings = service.coding {
-					for coding in codings {
-						if "OAuth2" == coding.code || "SMART-on-FHIR" == coding.code {
-							// TODO: what is this good for anyway?
-						}
-					}
-				}
-			}
-		}
-		
-		// SMART OAuth2 endpoints are at rest[0].security.extension[#].valueUri
-		if let smartauth = security.extensions(forURI: "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris")?.first?.extension_fhir {
-			for subext in smartauth where nil != subext.url {
-				switch subext.url?.string ?? "" {
-				case "authorize":
-					authSettings["authorize_uri"] = subext.valueUri?.absoluteString
-				case "token":
-					authSettings["token_uri"] = subext.valueUri?.absoluteString
-				case "register":
-					authSettings["registration_uri"] = subext.valueUri?.absoluteString
-				default:
-					break
-				}
-			}
-		}
-		
-		let hasAuthURI = (nil != authSettings["authorize_uri"])
-		if !hasAuthURI {
-			server.logger?.warn("SMART", msg: "Unsupported security services, will proceed without authorization method")
-			return nil
-		}
-		let hasTokenURI = (nil != authSettings["token_uri"])
-		self.init(type: (hasTokenURI ? .codeGrant : .implicitGrant), server: server, settings: authSettings)
-	}
+    
+    init(server: Server, configuration: OIDServiceConfiguration) {
+        self.server = server
+        self.issuer = configuration.issuer
+        self.configuration = configuration
+    }
 	
 	
 	// MARK: - Configuration
 	
-	/**
-	Finalize instance setup based on type and the a settings dictionary.
-	
-	- parameter withSettings: A dictionary with auth settings, passed on to OAuth2*()
-	*/
-	func configure(withSettings settings: OAuth2JSON) {
-		switch type {
-		case .codeGrant:
-			oauth = OAuth2CodeGrant(settings: settings)
-		case .implicitGrant:
-			oauth = OAuth2ImplicitGrant(settings: settings)
-		case .clientCredentials:
-			oauth = OAuth2ClientCredentials(settings: settings)
-		default:
-			oauth = nil
-		}
-	}
+    func discoverConfiguration(for issuer:URL) {
+        OIDAuthorizationService.discoverConfiguration(forIssuer: issuer) { [weak self] config, error in
+            if let error = error {
+                print("Error encountered:", error)
+            }
+            print("Config", config)
+            self?.configuration = config
+        }
+    }
+    
+    func requestAuthorization(_ parameters: AuthorizationParameters, presenting: UIViewController) {
+        guard let configuration = configuration else {
+            print("Error: configuration is nil")
+            return
+        }
+        
+        let request = parameters.buildRequest(with: configuration)
+        
+        self.session = OIDAuthState.authState(byPresenting: request, presenting: presenting) { (state, error) in
+            self.state = state
+            if let error = error { print("Error authorizing:",error) }
+        }
+    }
 	
 	/**
 	Reset auth, which includes setting authContext to nil and purging any known access and refresh tokens.
 	*/
 	func reset() {
 		authContext = nil
-		oauth?.forgetTokens()
+        session?.cancel()
+        session = nil
+        state = nil
 	}
+    
+    func performAction(additionalRefreshParameters: [String: String]? = nil, dispatchQueue: DispatchQueue = .main, action: @escaping Action) {
+        guard configuration != nil else {
+            print("Error: configuration is nil")
+            return
+        }
+        guard let state = state else {
+            print("Error: state is nil")
+            return
+        }
+        guard state.isAuthorized else {
+            print("Error: state is not authorized")
+            return
+        }
+        
+        state.performAction(freshTokens: action, additionalRefreshParameters: additionalRefreshParameters, dispatchQueue: dispatchQueue)
+
+    }
 	
-	
-	// MARK: - OAuth
-	
-	/**
-	Starts the authorization flow, either by opening an embedded web view or switching to the browser.
-	
-	Automatically adds the correct "launch*" scope, according to the authorization property granularity.
-	
-	If you use the OS browser to authorize, remember that you need to intercept the callback from the browser and call the client's
-	`didRedirect()` method, which redirects to this instance's `handleRedirect()` method.
-	
-	If selecting a patient is part of the authorization flow, will add a "patient" key with the patient-id to the returned dictionary. On
-	native patient selection adds a "patient_resource" key with the patient resource.
-	
-	- parameter properties: The authorization properties to use
-	- parameter callback:   The callback to call when authorization finishes (or is aborted)
-	*/
-	func authorize(with properties: SMARTAuthProperties, callback: @escaping ((_ parameters: OAuth2JSON?, _ error: Error?) -> Void)) {
-		if nil != authCallback {
-			abort()
-		}
-		
-		authProperties = properties
-		authCallback = callback
-		
-		// authorization via OAuth2
-		if let oa = oauth {
-			if oa.hasUnexpiredAccessToken() {
-				if properties.granularity != .patientSelectWeb {
-					server.logger?.debug("SMART", msg: "Have an unexpired access token and don't need web patient selection: not requesting a new token")
-					authDidSucceed(withParameters: OAuth2JSON(minimumCapacity: 0))
-					return
-				}
-				server.logger?.debug("SMART", msg: "Have an unexpired access token but want web patient selection: starting auth flow")
-				oa.forgetTokens()
-			}
-			
-			// adjust the scope for desired auth properties
-			var scope = oa.scope ?? "user/*.* openid profile"		// plus "launch" or "launch/patient", if needed
-			// TODO: clean existing "launch" scope if it's already contained
-			switch properties.granularity {
-				case .tokenOnly:
-					break
-				case .launchContext:
-					scope = "launch \(scope)"
-				case .patientSelectWeb:
-					scope = "launch/patient \(scope)"
-				case .patientSelectNative:
-					break
-			}
-			oa.scope = scope
-			
-			// start authorization (method implemented in iOS and OS X extensions)
-			callOnMainThread {
-				authorize(with: oa, properties: properties) { parameters, error in
-					if let error = error {
-						self.authDidFail(withError: error)
-					}
-					else {
-						self.authDidSucceed(withParameters: parameters ?? OAuth2JSON())
-					}
-				}
-			}
-		}
-			
-		// open server?
-		else if .none == type {
-			authDidSucceed(withParameters: OAuth2JSON(minimumCapacity: 0))
-		}
-		
-		else {
-			authDidFail(withError: FHIRError.error("I am not yet set up to authorize"))
-		}
-	}
-	
+    @discardableResult
 	func handleRedirect(_ redirect: URL) -> Bool {
-		guard let oauth = oauth, oauth.isAuthorizing else {
-			return false
-		}
-		do {
-			try oauth.handleRedirectURL(redirect)
-			return true
-		}
-		catch {}
-		return false
+        guard let session = session else {
+            print("Session is undefined")
+            return false
+        }
+        
+        return session.resumeExternalUserAgentFlow(with: url)
 	}
 	
-	internal func authDidSucceed(withParameters parameters: OAuth2JSON) {
-		if let props = authProperties, props.granularity == .patientSelectNative {
-			server.logger?.debug("SMART", msg: "Showing native patient selector after authorizing with parameters \(parameters)")
-			callOnMainThread() {
-				showPatientList(withParameters: parameters)
-			}
-		}
-		else {
-			server.logger?.debug("SMART", msg: "Did authorize with parameters \(parameters)")
-			processAuthCallback(parameters: parameters, error: nil)
-		}
-	}
-	
-	internal func authDidFail(withError error: Error?) {
-		if let error = error {
-			server.logger?.debug("SMART", msg: "Failed to authorize with error: \(error)")
-		}
-		processAuthCallback(parameters: nil, error: error)
-	}
-	
-	func abort() {
-		server.logger?.debug("SMART", msg: "Aborting authorization")
-		processAuthCallback(parameters: nil, error: nil)
-	}
-	
-	func forgetClientRegistration() {
-		oauth?.forgetClient()
-	}
-	
-	func processAuthCallback(parameters: OAuth2JSON?, error: Error?) {
-		if nil != authCallback {
-			authCallback!(parameters, error)
-			authCallback = nil
-		}
-	}
-	
-	
-	// MARK: - Requests
-	
-	/**
-	Returns a signed request, nil if the receiver cannot produce a signed request.
-	
-	- parameter forURL: The URL to request a resource from
-	- returns:          A URL request preconfigured and signed
-	*/
-	func signedRequest(forURL url: URL) -> URLRequest? {
-		return oauth?.request(forURL: url)
-	}
 }
 

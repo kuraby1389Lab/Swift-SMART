@@ -7,6 +7,7 @@
 /**
 Export dependencies so that projects using the SMART package do not need to also import dependency modules.
 */
-@_exported import OAuth2
+// @_exported import OAuth2
+@_exported import AppAuth
 @_exported import FHIR
 
