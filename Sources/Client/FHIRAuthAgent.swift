@@ -1,5 +1,5 @@
 //
-//  Auth.swift
+//  FHIRAuthAgent.swift
 //  SMART-on-FHIR
 //
 //  Created by Pascal Pfiffner on 6/11/14.
@@ -19,44 +19,8 @@ public extension URLRequest {
     
 }
 
-public struct AuthorizationParameters: Equatable {
-    public init(clientID: String,
-                clientSecret: String? = nil,
-                scopes: [String]? = nil,
-                redirectURL: URL? = nil,
-                responseType: String,
-                state: String? = nil,
-                nonce: String? = nil,
-                codeVerifier: String? = nil,
-                codeChallenge: String? = nil,
-                codeChallengeMethod: String? = nil,
-                additionalParameters: [String : String]? = nil) {
-        self.clientID = clientID
-        self.clientSecret = clientSecret
-        self.scopes = scopes
-        self.redirectURL = redirectURL
-        self.responseType = responseType
-        self.state = state
-        self.nonce = nonce
-        self.codeVerifier = codeVerifier
-        self.codeChallenge = codeChallenge
-        self.codeChallengeMethod = codeChallengeMethod
-        self.additionalParameters = additionalParameters
-    }
-    
-    public var clientID: String
-    public var clientSecret: String?
-    public var scopes:[String]?
-    public var redirectURL: URL?
-    public var responseType: String
-    public var state: String?
-    public var nonce: String?
-    public var codeVerifier: String?
-    public var codeChallenge: String?
-    public var codeChallengeMethod: String?
-    public var additionalParameters: [String: String]?
-    
-    public func buildRequest(with configuration:OIDServiceConfiguration) -> OIDAuthorizationRequest {
+extension FHIRAuthParameters {
+    func buildRequest(with configuration:OIDServiceConfiguration) -> OIDAuthorizationRequest {
         return OIDAuthorizationRequest(configuration: configuration,
                                        clientId: clientID,
                                        clientSecret: clientSecret,
@@ -72,7 +36,7 @@ public struct AuthorizationParameters: Equatable {
     }
 }
 
-class Auth {
+class FHIRAuthAgent {
 	
     private(set) var state: OIDAuthState?
     private(set) var configuration: OIDServiceConfiguration?
@@ -84,7 +48,7 @@ class Auth {
     let issuer: URL?
 	
 	/// The server this instance belongs to.
-	unowned let server: Server
+	unowned let server: FHIRAuthServer
 	
 	/// Context used during authorization to pass OS-specific information, handled in the extensions.
 	var authContext: AnyObject?
@@ -104,13 +68,13 @@ class Auth {
 	- parameter server: The server these auth settings apply to
 	- parameter settings: Authentication settings
 	*/
-    init(server: Server, issuer: URL) {
+    init(server: FHIRAuthServer, issuer: URL) {
 		self.server = server
         self.issuer = issuer
         discoverConfiguration(for: issuer)
 	}
     
-    init(server: Server, configuration: OIDServiceConfiguration) {
+    init(server: FHIRAuthServer, configuration: OIDServiceConfiguration) {
         self.server = server
         self.issuer = configuration.issuer
         self.configuration = configuration
@@ -129,7 +93,7 @@ class Auth {
         }
     }
     
-    func requestAuthorization(_ parameters: AuthorizationParameters, presenting: UIViewController) {
+    func requestAuthorization(_ parameters: FHIRAuthParameters, presenting: UIViewController) {
         guard let configuration = configuration else {
             print("Error: configuration is nil")
             return
@@ -178,7 +142,7 @@ class Auth {
             return false
         }
         
-        return session.resumeExternalUserAgentFlow(with: url)
+        return session.resumeExternalUserAgentFlow(with: redirect)
 	}
 	
 }

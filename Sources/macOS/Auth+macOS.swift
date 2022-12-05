@@ -1,5 +1,5 @@
 //
-//  Client+iOS.swift
+//  FHIRClient+iOS.swift
 //  SMART-on-FHIR
 //
 //  Created by Pascal Pfiffner on 6/25/14.
@@ -10,7 +10,7 @@
 import Cocoa
 
 
-extension Auth {
+extension FHIRAuthAgent {
 	
 	/**
 	Show the authorization view controller corresponding to the auth properties.

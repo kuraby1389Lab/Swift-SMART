@@ -1,5 +1,5 @@
 //
-//  Client+iOS.swift
+//  FHIRClient+iOS.swift
 //  SMART-on-FHIR
 //
 //  Created by Pascal Pfiffner on 6/25/14.

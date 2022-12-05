@@ -1,5 +1,5 @@
 //
-//  Client.swift
+//  FHIRClient.swift
 //  SMART-on-FHIR
 //
 //  Created by Pascal Pfiffner on 6/11/14.
@@ -55,10 +55,10 @@ let smart = Client(
 There are many other options that you can pass to `settings`, take a look at `init(baseURL:settings:)`. Also see our [programming
 guide](https://github.com/smart-on-fhir/Swift-SMART/wiki/Client) for more information.
 */
-open class Client {
+open class FHIRClient {
 	
 	/// The server this client connects to.
-	public final let server: Server
+	public final let server: FHIRAuthServer
 	
 	/// Set the authorize type you want, e.g. to use a built in web view for authentication and patient selection.
 	open var authProperties = SMARTAuthProperties()
@@ -69,7 +69,7 @@ open class Client {
 	
 	- parameter server: The server instance this client manages
 	*/
-	public init(server: Server) {
+	public init(server: FHIRAuthServer) {
 		self.server = server
 		// server.logger?.debug("SMART", msg: "Initialized SMART on FHIR client against server \(server.baseURL.description)")
 	}

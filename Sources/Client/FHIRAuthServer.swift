@@ -8,6 +8,7 @@
 
 import Foundation
 import AppAuth
+import NotificationCenter
 
 /**
 Representing the FHIR resource server a client connects to.
@@ -20,8 +21,9 @@ instance or validating/executing operations.
 
 A server manages its own NSURLSession, either with an optional delegate provided via `sessionDelegate` or simply the system shared
 session. Subclasses can change this behavior by overriding `createDefaultSession` or any of the other request-related methods.
+
 */
-open class Server: FHIROpenServer {
+open class FHIRAuthServer: FHIROpenServer {
 	
 	/// The service URL as a string, as specified during initalization to be used as `aud` parameter.
 	public final let aud: String
@@ -30,26 +32,12 @@ open class Server: FHIROpenServer {
 	public final var name: String?
 	
 	/// The authorization to use with the server.
-	var auth: Auth?
-//    {
-//		didSet {
-//			if let auth = auth {
-//				if let oauth = auth.oauth {
-//					oauth.sessionDelegate = sessionDelegate
-//					oauth.onBeforeDynamicClientRegistration = onBeforeDynamicClientRegistration
-//					if let logger = logger {
-//						oauth.logger = logger
-//					}
-//				}
-//				logger?.debug("SMART", msg: "Initialized server auth of type “\(auth.type.rawValue)”")
-//			}
-//		}
-//	}
+	private(set) var agent: FHIRAuthAgent?
 	
 	
 	/// The refresh token provided with the access token; Issuing a refresh token is optional at the discretion of the authorization server.
 	public var refreshToken: String? {
-        get { return auth?.state?.refreshToken }
+        agent?.state?.refreshToken
 	}
 	
 	var mustAbortAuthorization = false
@@ -67,14 +55,19 @@ open class Server: FHIROpenServer {
     
     public convenience init(baseURL: URL, issuer: URL) {
         self.init(baseURL: baseURL)
-        self.auth = Auth(server: self, issuer: issuer)
+        self.agent = FHIRAuthAgent(server: self, issuer: issuer)
     }
     
     public convenience required init(baseURL: URL, configuration: OIDServiceConfiguration) {
         self.init(baseURL: baseURL)
-        self.auth = Auth(server: self, configuration: configuration)
+        self.agent = FHIRAuthAgent(server: self, configuration: configuration)
     }
 	
+    
+    public var isAuthorized: Bool {
+        agent?.state?.isAuthorized ?? false
+    }
+    
 	
 	// MARK: - Requests
 	
@@ -195,6 +188,13 @@ open class Server: FHIROpenServer {
 //			}
 //		}
 //	}
+    
+
+
+    
+    
+    
+    
 //
 //	/**
 //	Ensures that the receiver is ready, then calls the auth method's `authorize()` method.
@@ -258,16 +258,16 @@ open class Server: FHIROpenServer {
 	*/
 	func reset() {
 		// abort()
-		auth?.reset()
+		agent?.reset()
 	}
     
-    public func requestAuthorization(_ parameters: AuthorizationParameters, presenting: UIViewController) {
-        auth?.requestAuthorization(parameters, presenting: presenting)
+    public func requestAuthorization(_ parameters: FHIRAuthParameters, presenting: UIViewController) {
+        agent?.requestAuthorization(parameters, presenting: presenting)
     }
     
     @discardableResult
     public func handleRedirect(_ redirect: URL) -> Bool {
-        guard let auth = auth else {
+        guard let auth = agent else {
             print("Session is undefined")
             return false
         }
@@ -303,6 +303,4 @@ open class Server: FHIROpenServer {
 //		auth = nil
 //	}
 }
-
-public typealias FHIRBaseServer = Server
 
