@@ -1,5 +1,5 @@
 //
-//  FHIRAuthAgent.swift
+//  SMARTAuthAgent.swift
 //  SMART-on-FHIR
 //
 //  Created by Pascal Pfiffner on 6/11/14.
@@ -19,7 +19,7 @@ public extension URLRequest {
     
 }
 
-extension FHIRAuthParameters {
+extension SMARTAuthParameters {
     func buildRequest(with configuration:OIDServiceConfiguration) -> OIDAuthorizationRequest {
         return OIDAuthorizationRequest(configuration: configuration,
                                        clientId: clientID,
@@ -36,7 +36,7 @@ extension FHIRAuthParameters {
     }
 }
 
-class FHIRAuthAgent {
+class SMARTAuthAgent {
 	
     private(set) var state: OIDAuthState?
     private(set) var configuration: OIDServiceConfiguration?
@@ -48,7 +48,7 @@ class FHIRAuthAgent {
     let issuer: URL?
 	
 	/// The server this instance belongs to.
-	unowned let server: FHIRAuthServer
+	unowned let server: SMARTServer
 	
 	/// Context used during authorization to pass OS-specific information, handled in the extensions.
 	var authContext: AnyObject?
@@ -68,13 +68,13 @@ class FHIRAuthAgent {
 	- parameter server: The server these auth settings apply to
 	- parameter settings: Authentication settings
 	*/
-    init(server: FHIRAuthServer, issuer: URL) {
+    init(server: SMARTServer, issuer: URL) {
 		self.server = server
         self.issuer = issuer
         discoverConfiguration(for: issuer)
 	}
     
-    init(server: FHIRAuthServer, configuration: OIDServiceConfiguration) {
+    init(server: SMARTServer, configuration: OIDServiceConfiguration) {
         self.server = server
         self.issuer = configuration.issuer
         self.configuration = configuration
@@ -90,20 +90,6 @@ class FHIRAuthAgent {
             }
             print("Config", config)
             self?.configuration = config
-        }
-    }
-    
-    func requestAuthorization(_ parameters: FHIRAuthParameters, presenting: UIViewController) {
-        guard let configuration = configuration else {
-            print("Error: configuration is nil")
-            return
-        }
-        
-        let request = parameters.buildRequest(with: configuration)
-        
-        self.session = OIDAuthState.authState(byPresenting: request, presenting: presenting) { (state, error) in
-            self.state = state
-            if let error = error { print("Error authorizing:",error) }
         }
     }
 	
@@ -147,3 +133,38 @@ class FHIRAuthAgent {
 	
 }
 
+#if os(iOS)
+extension SMARTAuthAgent {
+    func requestAuthorization(_ parameters: SMARTAuthParameters, presenting: UIViewController) {
+        guard let configuration = configuration else {
+            print("Error: configuration is nil")
+            return
+        }
+        
+        let request = parameters.buildRequest(with: configuration)
+        
+        self.session = OIDAuthState.authState(byPresenting: request, presenting: presenting) { (state, error) in
+            self.state = state
+            if let error = error { print("Error authorizing:",error) }
+        }
+    }
+}
+#endif
+
+#if os(macOS)
+extension SMARTAuthAgent {
+    func requestAuthorization(_ parameters: SMARTAuthParameters, presenting: NSWindow) {
+        guard let configuration = configuration else {
+            print("Error: configuration is nil")
+            return
+        }
+        
+        let request = parameters.buildRequest(with: configuration)
+        
+        self.session = OIDAuthState.authState(byPresenting: request, presenting: presenting) { (state, error) in
+            self.state = state
+            if let error = error { print("Error authorizing:",error) }
+        }
+    }
+}
+#endif

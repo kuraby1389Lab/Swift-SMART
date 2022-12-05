@@ -1,5 +1,5 @@
 //
-//  Server.swift
+//  SMARTServer.swift
 //  SMART-on-FHIR
 //
 //  Created by Pascal Pfiffner on 6/11/14.
@@ -23,7 +23,7 @@ A server manages its own NSURLSession, either with an optional delegate provided
 session. Subclasses can change this behavior by overriding `createDefaultSession` or any of the other request-related methods.
 
 */
-open class FHIRAuthServer: FHIROpenServer {
+open class SMARTServer: FHIROpenServer {
 	
 	/// The service URL as a string, as specified during initalization to be used as `aud` parameter.
 	public final let aud: String
@@ -32,12 +32,12 @@ open class FHIRAuthServer: FHIROpenServer {
 	public final var name: String?
 	
 	/// The authorization to use with the server.
-	private(set) var agent: FHIRAuthAgent?
+	private(set) var authAgent: SMARTAuthAgent?
 	
 	
 	/// The refresh token provided with the access token; Issuing a refresh token is optional at the discretion of the authorization server.
 	public var refreshToken: String? {
-        agent?.state?.refreshToken
+        authAgent?.state?.refreshToken
 	}
 	
 	var mustAbortAuthorization = false
@@ -55,17 +55,17 @@ open class FHIRAuthServer: FHIROpenServer {
     
     public convenience init(baseURL: URL, issuer: URL) {
         self.init(baseURL: baseURL)
-        self.agent = FHIRAuthAgent(server: self, issuer: issuer)
+        self.authAgent = SMARTAuthAgent(server: self, issuer: issuer)
     }
     
     public convenience required init(baseURL: URL, configuration: OIDServiceConfiguration) {
         self.init(baseURL: baseURL)
-        self.agent = FHIRAuthAgent(server: self, configuration: configuration)
+        self.authAgent = SMARTAuthAgent(server: self, configuration: configuration)
     }
 	
     
     public var isAuthorized: Bool {
-        agent?.state?.isAuthorized ?? false
+        authAgent?.state?.isAuthorized ?? false
     }
     
 	
@@ -258,16 +258,12 @@ open class FHIRAuthServer: FHIROpenServer {
 	*/
 	func reset() {
 		// abort()
-		agent?.reset()
+		authAgent?.reset()
 	}
-    
-    public func requestAuthorization(_ parameters: FHIRAuthParameters, presenting: UIViewController) {
-        agent?.requestAuthorization(parameters, presenting: presenting)
-    }
     
     @discardableResult
     public func handleRedirect(_ redirect: URL) -> Bool {
-        guard let auth = agent else {
+        guard let auth = authAgent else {
             print("Session is undefined")
             return false
         }
@@ -303,4 +299,20 @@ open class FHIRAuthServer: FHIROpenServer {
 //		auth = nil
 //	}
 }
+
+#if os(iOS)
+public extension SMARTServer {
+    func requestAuthorization(_ parameters: SMARTAuthParameters, presenting: UIViewController) {
+        authAgent?.requestAuthorization(parameters, presenting: presenting)
+    }
+}
+#endif
+
+#if os(macOS)
+public extension SMARTServer {
+    func requestAuthorization(_ parameters: SMARTAuthParameters, presenting: NSWindow) {
+        authAgent?.requestAuthorization(parameters, presenting: presenting)
+    }
+}
+#endif
 

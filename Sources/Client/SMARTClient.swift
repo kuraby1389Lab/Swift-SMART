@@ -1,5 +1,5 @@
 //
-//  FHIRClient.swift
+//  SMARTClient.swift
 //  SMART-on-FHIR
 //
 //  Created by Pascal Pfiffner on 6/11/14.
@@ -7,33 +7,6 @@
 //
 
 import Foundation
-
-
-/**
-Describes properties for the authorization flow.
-*/
-public struct SMARTAuthProperties {
-	
-	/// Whether the client should use embedded view controllers for the auth flow or just redirect to the OS's browser.
-	public var embedded = true
-	
-	/// How granular the authorize flow should be.
-	public var granularity = SMARTAuthGranularity.patientSelectNative
-	
-	public init() {  }
-}
-
-
-/**
-Enum describing the desired granularity of the authorize flow.
-*/
-public enum SMARTAuthGranularity {
-	case tokenOnly
-	case launchContext
-	case patientSelectWeb
-	case patientSelectNative
-}
-
 
 /**
 A client instance handles authentication and connection to a SMART on FHIR resource server.
@@ -55,13 +28,10 @@ let smart = Client(
 There are many other options that you can pass to `settings`, take a look at `init(baseURL:settings:)`. Also see our [programming
 guide](https://github.com/smart-on-fhir/Swift-SMART/wiki/Client) for more information.
 */
-open class FHIRClient {
+open class SMARTClient {
 	
 	/// The server this client connects to.
-	public final let server: FHIRAuthServer
-	
-	/// Set the authorize type you want, e.g. to use a built in web view for authentication and patient selection.
-	open var authProperties = SMARTAuthProperties()
+	public final let server: SMARTServer
 	
 	
 	/**
@@ -69,7 +39,7 @@ open class FHIRClient {
 	
 	- parameter server: The server instance this client manages
 	*/
-	public init(server: FHIRAuthServer) {
+	public init(server: SMARTServer) {
 		self.server = server
 		// server.logger?.debug("SMART", msg: "Initialized SMART on FHIR client against server \(server.baseURL.description)")
 	}

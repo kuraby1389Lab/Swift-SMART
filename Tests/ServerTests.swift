@@ -15,7 +15,7 @@ import SMART
 class ServerTests: XCTestCase {
 	
 	func testMetadataParsing() throws {
-		let server = FHIRAuthServer(baseURL: URL(string: "https://api.io")!)
+		let server = SMARTServer(baseURL: URL(string: "https://api.io")!)
 		XCTAssertEqual("https://api.io/", server.baseURL.absoluteString)
 		XCTAssertEqual("https://api.io", server.aud)
 		
@@ -32,7 +32,7 @@ class ServerTests: XCTestCase {
     }
 	
 	func testMetadataFailing() {
-		var server = FHIRAuthServer(baseURL: URL(string: "https://api.ioio")!)		// invalid TLD, so requesting from .ioio should definitely fail
+		var server = SMARTServer(baseURL: URL(string: "https://api.ioio")!)		// invalid TLD, so requesting from .ioio should definitely fail
 		let exp1 = self.expectation(description: "Metadata fetch expectation 1")
 		server.getCapabilityStatement() { error in
 			XCTAssertNotNil(error, "Must raise an error when fetching metatada fails")

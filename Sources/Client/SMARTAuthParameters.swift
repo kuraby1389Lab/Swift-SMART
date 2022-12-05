@@ -1,5 +1,5 @@
 //
-//  FHIRAuthParameters.swift
+//  SMARTAuthParameters.swift
 //  SwiftSMART
 //
 //  Created by Trystan on 5/12/2022.
@@ -9,7 +9,7 @@
 import Foundation
 
 
-public struct FHIRAuthParameters: Equatable {
+public struct SMARTAuthParameters: Equatable {
     public init(clientID: String,
                 clientSecret: String? = nil,
                 scopes: [String]? = nil,
